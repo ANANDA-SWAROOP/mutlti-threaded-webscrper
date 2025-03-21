@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Scraper</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        h1 { color: #333; }
+        form { margin-bottom: 20px; }
+        label { margin-right: 10px; }
+        #results div { margin-top: 20px; }
+        #results h2 { color: #555; }
+        #results ul { list-style-type: none; padding: 0; }
+        #results li { margin: 5px 0; }
+    </style>
+</head>
+<body>
+    <h1>Web Scraper</h1>
+    <form id="scrapeForm">
+        <label for="url">Website URL:</label><br>
+        <input type="text" id="url" name="url" placeholder="https://example.com" required style="width: 300px;"><br><br>
+        <input type="checkbox" id="headings" name="options" value="headings">
+        <label for="headings">Headings</label><br>
+        <input type="checkbox" id="text" name="options" value="text">
+        <label for="text">Text</label><br>
+        <input type="checkbox" id="links" name="options" value="links">
+        <label for="links">Links</label><br>
+        <input type="checkbox" id="emails" name="options" value="emails">
+        <label for="emails">Emails</label><br>
+        <input type="checkbox" id="images" name="options" value="images">
+        <label for="images">Images/Photos/Logos</label><br>
+        <input type="checkbox" id="contacts" name="options" value="contacts">
+        <label for="contacts">Contacts (Phone Numbers)</label><br><br>
+        <button type="submit">Scrape</button>
+    </form>
+    <div id="results"></div>
+
+    <script>
+        document.getElementById("scrapeForm").addEventListener("submit", function(event) {
+    event.preventDefault();
+
+    const url = document.getElementById("url").value;
+    const options = Array.from(document.querySelectorAll("input[name='options']:checked")).map(el => el.value);
+
+    if (options.length === 0) {
+        alert("Please select at least one data type to scrape.");
+        return;
+    }
+
+    fetch("/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, options })
+    })
+    .then(response => response.text())  // Get the response as text first
+    .then(text => {
+        if (text) {
+            try {
+                return JSON.parse(text);  // Attempt to parse the text as JSON
+            } catch (e) {
+                throw new Error("Invalid JSON response: " + text);  // Include response text in error
+            }
+        } else {
+            throw new Error("Empty response body");  // Handle empty response
+        }
+    })
+    .then(data => {
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";
+        if (data.error) {
+            resultsDiv.innerHTML = `<p style="color: red;">${data.error}</p>`;
+            return;
+        }
+        for (const [key, value] of Object.entries(data)) {
+            const section = document.createElement("div");
+            const items = value.length > 0 ? value.map(item => `<li>${item}</li>`).join("") : "<li>No data found</li>";
+            section.innerHTML = `<h2>${key.charAt(0).toUpperCase() + key.slice(1)}</h2><ul>${items}</ul>`;
+            resultsDiv.appendChild(section);
+        }
+    })
+    .catch(error => {
+        console.error("Error:", error);
+        document.getElementById("results").innerHTML = `<p style="color: red;">An error occurred: ${error.message}</p>`;
+    });
+});
+    </script>
+</body>
+</html>
